@@ -75,7 +75,11 @@ KEYWORDS_BY_LANGUAGE: dict[str, dict[Intent, list[str]]] = {
         Intent.CANCEL: ["mba", "kagbuo"],
     },
     "ha": {
-        Intent.QUERY_STEPS: ["matakaina", "nawa matakaina ne"],
+        # "matakai na" included alongside "matakaina": observed live against
+        # real Google STT output that it sometimes splits the compound word
+        # into two tokens - matching needs to tolerate that, not just the
+        # dictionary-correct spelling.
+        Intent.QUERY_STEPS: ["matakaina", "matakai na", "nawa matakaina ne"],
         Intent.QUERY_STREAK: ["jerina", "kwanakina a jere"],
         Intent.QUERY_LEADERBOARD: ["matsayina"],
         Intent.SHARE_PROGRESS: ["raba ci gabana"],

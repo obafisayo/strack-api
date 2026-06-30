@@ -89,7 +89,7 @@ async def listen(
 
     if not transcript:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "Could not recognize any speech in the audio"
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Could not recognize any speech in the audio"
         )
 
     intent = match_intent(transcript, language)

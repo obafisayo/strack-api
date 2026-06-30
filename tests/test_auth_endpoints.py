@@ -35,8 +35,6 @@ INVALID_REGISTER_PAYLOADS = [
     pytest.param({"email": "test@", "password": VALID_PASSWORD}, id="email-empty-domain"),
     pytest.param({"email": "test@@example.com", "password": VALID_PASSWORD}, id="email-double-at"),
     pytest.param({"email": "test @example.com", "password": VALID_PASSWORD}, id="email-internal-space"),
-    pytest.param({"email": " test@example.com", "password": VALID_PASSWORD}, id="email-leading-space"),
-    pytest.param({"email": "test@example.com ", "password": VALID_PASSWORD}, id="email-trailing-space"),
     pytest.param({"email": "test\n@example.com", "password": VALID_PASSWORD}, id="email-embedded-newline"),
     pytest.param({"email": "test\x00@example.com", "password": VALID_PASSWORD}, id="email-null-byte"),
     pytest.param({"email": "', OR '1'='1@example.com", "password": VALID_PASSWORD}, id="email-sql-injection-shaped"),
@@ -77,6 +75,14 @@ VALID_EDGE_REGISTER_PAYLOADS = [
     pytest.param({"email": "üser@example.com", "password": VALID_PASSWORD}, id="email-unicode-local-part"),
 ]
 
+# email-validator strips leading/trailing whitespace before validating, so
+# these are accepted (not 422) - documents that surprising-but-real behavior
+# rather than assuming whitespace makes an email invalid.
+WHITESPACE_TRIMMED_EMAIL_PAYLOADS = [
+    pytest.param(" trimleft@example.com", id="email-leading-space-is-stripped-and-accepted"),
+    pytest.param("trimright@example.com ", id="email-trailing-space-is-stripped-and-accepted"),
+]
+
 
 @pytest.mark.parametrize("extra", VALID_EDGE_REGISTER_PAYLOADS)
 async def test_register_accepts_valid_edge_case(client, extra):
@@ -87,6 +93,14 @@ async def test_register_accepts_valid_edge_case(client, extra):
     assert body["access_token"]
     assert body["refresh_token"]
     assert body["user_id"]
+
+
+@pytest.mark.parametrize("email", WHITESPACE_TRIMMED_EMAIL_PAYLOADS)
+async def test_register_accepts_and_trims_whitespace_padded_email(client, email):
+    response = await client.post(
+        "/api/v1/auth/register", json={"email": email, "password": VALID_PASSWORD}
+    )
+    assert response.status_code == 201, response.text
 
 
 async def test_register_ignores_unexpected_extra_fields(client):
@@ -401,9 +415,10 @@ async def test_refresh_token_with_far_future_iat_still_processed(client, registe
     token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
     response = await client.post("/api/v1/auth/refresh", json={"refresh_token": token})
-    # PyJWT doesn't reject a future iat by default - documents that this
-    # passes rather than assuming it's rejected.
-    assert response.status_code == 200
+    # PyJWT 2.10+ rejects tokens whose iat is in the future as a security
+    # hardening measure - verified empirically (this used to be assumed
+    # accepted; it isn't, on the installed PyJWT 2.13).
+    assert response.status_code == 401
 
 
 # --------------------------------------------------------------------------

@@ -8,6 +8,7 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.steps import DailyStat, StepEvent, StepSource
@@ -56,6 +57,15 @@ async def record_step_events(
     return affected_dates
 
 
+def _apply_stat_fields(stat: DailyStat, total_steps: int, just_completed_goal: bool) -> None:
+    stat.total_steps = total_steps
+    stat.distance_km = round(total_steps * KM_PER_STEP, 2)
+    stat.calories = round(total_steps * CALORIES_PER_STEP)
+    stat.active_minutes = total_steps // STEPS_PER_ACTIVE_MINUTE
+    if just_completed_goal:
+        stat.goal_completed_at = datetime.now(timezone.utc)
+
+
 async def recompute_daily_stat(db: AsyncSession, user: User, target_date: date) -> DailyStat:
     total_steps = await db.scalar(
         select(func.coalesce(func.sum(StepEvent.steps_delta), 0)).where(
@@ -75,15 +85,34 @@ async def recompute_daily_stat(db: AsyncSession, user: User, target_date: date) 
 
     if stat is None:
         stat = DailyStat(user_id=user.id, date=target_date)
-        db.add(stat)
-
-    stat.total_steps = total_steps
-    stat.distance_km = round(total_steps * KM_PER_STEP, 2)
-    stat.calories = round(total_steps * CALORIES_PER_STEP)
-    stat.active_minutes = total_steps // STEPS_PER_ACTIVE_MINUTE
-    if just_completed_goal:
-        stat.goal_completed_at = datetime.now(timezone.utc)
-    await db.flush()
+        _apply_stat_fields(stat, total_steps, just_completed_goal)
+        try:
+            # SAVEPOINT, not a full-session rollback - see the matching
+            # comment in get_or_create_daily_goal for why a plain
+            # db.rollback() here would crash later attribute access on
+            # `user`/`goal` (already loaded earlier in this same session)
+            # with MissingGreenlet instead of just losing this one insert.
+            async with db.begin_nested():
+                db.add(stat)
+                await db.flush()
+        except IntegrityError:
+            # Lost a race against a concurrent recompute for the same
+            # user+date creating the DailyStat row first (identical TOCTOU
+            # pattern to get_or_create_daily_goal). Re-fetch the winner's
+            # row and re-apply these field values to it instead of erroring.
+            stat = await db.scalar(
+                select(DailyStat).where(
+                    DailyStat.user_id == user.id, DailyStat.date == target_date
+                )
+            )
+            if stat is None:
+                raise
+            just_completed_goal = total_steps >= goal.goal_steps and stat.goal_completed_at is None
+            _apply_stat_fields(stat, total_steps, just_completed_goal)
+            await db.flush()
+    else:
+        _apply_stat_fields(stat, total_steps, just_completed_goal)
+        await db.flush()
 
     await streak_service.update_streak(
         db, user, target_date, goal_completed=stat.goal_completed_at is not None

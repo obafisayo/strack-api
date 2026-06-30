@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.core.deps import DbSession
 from app.core.security import (
@@ -38,10 +39,22 @@ def _issue_tokens(user: User) -> TokenResponse:
 async def _provision_new_user(db: DbSession, **user_kwargs) -> User:
     user = User(**user_kwargs)
     db.add(user)
-    await db.flush()
-    db.add(UserSettings(user_id=user.id))
-    db.add(Streak(user_id=user.id))
-    await db.commit()
+    try:
+        await db.flush()
+        db.add(UserSettings(user_id=user.id))
+        db.add(Streak(user_id=user.id))
+        await db.commit()
+    except IntegrityError as exc:
+        # The email-existence pre-check in register()/google_auth() is
+        # inherently racy (TOCTOU) - two concurrent requests for the same
+        # email can both pass it before either commits. The DB's unique
+        # constraints (email, and username since it's derived from email
+        # and can collide too) are the real source of truth; without this,
+        # the race surfaces as an unhandled 500 instead of a clean 409.
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "An account with this email already exists"
+        ) from exc
     await db.refresh(user)
     return user
 

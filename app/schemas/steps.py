@@ -7,7 +7,7 @@ from app.models.steps import StepSource
 
 
 class StepEventIn(BaseModel):
-    client_event_id: str = Field(max_length=100)
+    client_event_id: str = Field(min_length=1, max_length=100)
     steps_delta: int = Field(gt=0, le=100_000)
     recorded_at: datetime
 

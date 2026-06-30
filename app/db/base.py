@@ -21,7 +21,18 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
-engine = create_async_engine(settings.database_url, echo=settings.debug, future=True)
+engine = create_async_engine(
+    settings.database_url,
+    echo=settings.debug,
+    future=True,
+    # SQLAlchemy's bare default (5 + 10 overflow = 15 max concurrent
+    # connections) is thin for a single-process API handling concurrent
+    # requests - bumped for headroom in both production and tests (where
+    # the concurrent/asyncio.gather adversarial tests in tests/ make this
+    # contention visible as intermittent flakiness, not just a hypothetical).
+    pool_size=10,
+    max_overflow=20,
+)
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
 
 

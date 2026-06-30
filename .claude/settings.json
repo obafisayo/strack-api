@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wsl.exe -- bash -lc \"cd /mnt/c/Users/sekan/workspace/strack-api && docker compose exec api curl -s -o /dev/null -w 'inside-container HTTP %{http_code}\\\\n' http://localhost:8000/health\")"
+    ]
+  }
+}

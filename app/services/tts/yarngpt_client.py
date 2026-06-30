@@ -3,28 +3,25 @@
 Confirmed contract (https://yarngpt.ai/api/v1/tts):
   POST, Bearer auth, JSON body {text, voice, response_format}, text <= 2000
   chars, response body is the raw audio file bytes (mp3 by default) - not a
-  JSON envelope.
+  JSON envelope. GET https://yarngpt.ai/voices (no /api/v1 prefix) lists the
+  voices actually available on this account/key.
 
-The API has no separate `language` field - the spoken language comes from
-two things together: (1) the `text` itself must already be written in that
-language (for Yoruba, ideally with tone marks - à, á - for accurate
-pronunciation), and (2) a `voice` matching that language, since voices are
-themselves language-specific speakers, not generic narrators.
+The API has no `language` field at all - only `voice`, a fixed roster of
+narrator voices. Verified live against GET /voices: this account only has
+the 16 generic voices below. Earlier guidance claiming Yoruba-specific
+voices ("abayomi", "aisha", "folake") does NOT match this account's real
+catalogue - POSTing voice="abayomi" gets HTTP 400 "Invalid Voice". So today,
+every language uses DEFAULT_VOICE; "language" only affects what `text` we
+hand it (it must already be written in the target language - tone marks
+included for Yoruba, e.g. à/á - since the API does not translate).
 
-Confirmed voice names:
-  - English (generic):  Idera, Emma, Zainab, Osagie, Wura, Jude, Chinenye,
-                         Tayo, Regina, Femi, Adaora, Umar, Mary, Nonso,
-                         Remi, Adam
-  - Yoruba:              abayomi, aisha, folake
+Confirmed voice names (GET /voices, 2026-06-30):
+  Idera, Emma, Zainab, Osagie, Wura, Jude, Chinenye, Tayo, Regina, Femi,
+  Adaora, Umar, Mary, Nonso, Remi, Adam
 
-We do NOT have confirmed voice names for Igbo, Hausa, French, Portuguese,
-Japanese, Turkish, or Arabic - YarnGPT's voice catalogue so far looks
-Nigerian-language-focused, so it's possible some of those (fr/pt/ja/tr/ar in
-particular) aren't supported by this provider at all. Until confirmed, any
-language without a known voice falls back to DEFAULT_VOICE, which will
-mispronounce non-English/non-Yoruba text - this is a known gap, not a bug.
-Update VOICE_BY_LANGUAGE here (the only place this mapping lives) once more
-voice names are confirmed.
+If language-specific voices are added to the account later, or confirmed via
+GET /voices, map them in VOICE_BY_LANGUAGE below - the only place this
+mapping lives.
 """
 
 import httpx
@@ -38,10 +35,15 @@ DEFAULT_VOICE = "Idera"
 
 VOICE_BY_LANGUAGE: dict[str, str] = {
     "en": "Idera",
-    "yo": "abayomi",
-    # ig, ha, fr, pt, ja, tr, ar: no confirmed voice name yet - falls back
-    # to DEFAULT_VOICE via .get() below.
+    # yo, ig, ha, fr, pt, ja, tr, ar: no confirmed language-specific voice on
+    # this account (GET /voices returns only the generic roster above) -
+    # falls back to DEFAULT_VOICE via .get() below.
 }
+
+# YarnGPT has shown a slow cold-start on the first request after idle (30s+
+# with no response), then ~3-5s on subsequent calls. Generous timeout to
+# avoid spuriously failing that first request.
+REQUEST_TIMEOUT_SECONDS = 60.0
 
 
 class YarnGPTClient(TTSProvider):
@@ -55,7 +57,7 @@ class YarnGPTClient(TTSProvider):
 
         voice = VOICE_BY_LANGUAGE.get(language, DEFAULT_VOICE)
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as client:
             try:
                 response = await client.post(
                     self._base_url,
@@ -63,8 +65,12 @@ class YarnGPTClient(TTSProvider):
                     json={"text": text, "voice": voice, "response_format": "mp3"},
                 )
                 response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise TTSGenerationError(
+                    f"YarnGPT request failed: {exc.response.status_code} {exc.response.text}"
+                ) from exc
             except httpx.HTTPError as exc:
-                raise TTSGenerationError(f"YarnGPT request failed: {exc}") from exc
+                raise TTSGenerationError(f"YarnGPT request failed: {exc!r}") from exc
 
         return response.content
 

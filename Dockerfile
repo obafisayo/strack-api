@@ -13,7 +13,12 @@ RUN pip install --no-cache-dir .
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY static ./static
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Production entrypoint: runs migrations, then serves without --reload, on
+# $PORT if the platform sets one (Render et al), else 8000. Local dev's
+# docker-compose.yml overrides `command` with its own --reload variant.
+CMD ["./docker-entrypoint.sh"]

@@ -1,0 +1,12 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.env
+.env.example
+tests
+static/audio/*
+!static/audio/.gitkeep
+README.md

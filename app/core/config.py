@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +11,20 @@ class Settings(BaseSettings):
     debug: bool = True
 
     database_url: str
+
+    @field_validator("database_url")
+    @classmethod
+    def _force_asyncpg_driver(cls, value: str) -> str:
+        # Managed Postgres providers (Render, Heroku, etc.) hand back a plain
+        # postgres:// or postgresql:// URL. SQLAlchemy defaults that scheme to
+        # the psycopg2 driver, which we don't install - we're asyncpg-only.
+        # Rewriting here means deploy targets work without hand-editing
+        # whatever DATABASE_URL the platform injects.
+        if value.startswith("postgres://"):
+            return "postgresql+asyncpg://" + value[len("postgres://") :]
+        if value.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + value[len("postgresql://") :]
+        return value
 
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"

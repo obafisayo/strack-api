@@ -33,6 +33,11 @@ class Settings(BaseSettings):
 
     google_client_id: str = ""
 
+    # Full contents of a GCP service account JSON key, pasted as one env var
+    # (not a file path) - works on platforms like Render with no persistent
+    # filesystem to drop a key file into. Used for Cloud Speech-to-Text.
+    google_application_credentials_json: str = ""
+
     yarngpt_api_key: str = ""
     yarngpt_api_base_url: str = ""
 

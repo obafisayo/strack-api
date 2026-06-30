@@ -20,6 +20,7 @@ SUPPORTED_LANGUAGES = [
     {"code": "yo", "label": "Yoruba"},
     {"code": "ig", "label": "Igbo"},
     {"code": "ha", "label": "Hausa"},
+    {"code": "pcm", "label": "Nigerian Pidgin"},
     {"code": "fr", "label": "Français"},
     {"code": "pt", "label": "Português"},
     {"code": "ja", "label": "日本語"},

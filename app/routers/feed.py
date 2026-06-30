@@ -4,10 +4,11 @@ from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 
 from app.core.deps import CurrentUser, DbSession
-from app.models.feed import FeedPost, FeedPostType, Reaction
+from app.models.feed import FeedPost, Reaction
 from app.models.friends import Friendship, FriendshipStatus
 from app.models.user import User
 from app.schemas.feed import FeedPostRead, FeedShareRequest, ReactionRequest
+from app.services import feed_service
 
 router = APIRouter(prefix="/feed", tags=["feed"])
 
@@ -80,12 +81,7 @@ async def get_community_feed(
 async def share_to_community(
     payload: FeedShareRequest, user: CurrentUser, db: DbSession
 ) -> FeedPostRead:
-    post = FeedPost(
-        user_id=user.id,
-        type=FeedPostType.COMMUNITY_SHARE,
-        payload={"message": payload.message} if payload.message else {},
-    )
-    db.add(post)
+    post = await feed_service.create_community_share_post(db, user, payload.message)
     await db.commit()
     await db.refresh(post)
     return await _to_feed_post_read(db, post, user)

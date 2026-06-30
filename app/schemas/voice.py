@@ -23,3 +23,12 @@ class VoiceSpeakResponse(BaseModel):
     language: str
     audio_url: str
     cached: bool
+
+
+class VoiceListenResponse(BaseModel):
+    transcript: str
+    language: str
+    intent: str
+    response_text: str
+    audio_url: str
+    result: dict | None = None

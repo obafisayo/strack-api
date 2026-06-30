@@ -100,3 +100,17 @@ async def get_daily_stat(db: AsyncSession, user: User, target_date: date) -> Dai
     return await db.scalar(
         select(DailyStat).where(DailyStat.user_id == user.id, DailyStat.date == target_date)
     )
+
+
+async def soft_delete_step_event(db: AsyncSession, user: User, event: StepEvent) -> None:
+    """Soft-deletes a step event and recomputes that day's aggregate.
+
+    Does NOT create an undo record - shared by the REST DELETE endpoint and
+    the voice-command delete flow, both of which create their own
+    app.services.undo_service record afterward. Kept separate to avoid a
+    step_aggregation <-> undo_service import cycle (undo_service already
+    calls back into step_aggregation.recompute_daily_stat to restore state).
+    """
+    event.deleted_at = datetime.now(timezone.utc)
+    await db.flush()
+    await recompute_daily_stat(db, user, event.recorded_at.date())

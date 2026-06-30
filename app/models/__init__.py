@@ -11,4 +11,4 @@ from app.models.steps import DailyStat, StepEvent  # noqa: F401
 from app.models.streaks import Streak  # noqa: F401
 from app.models.undo import UndoAction  # noqa: F401
 from app.models.user import User  # noqa: F401
-from app.models.voice import VoiceClip  # noqa: F401
+from app.models.voice import PendingVoiceConfirmation, VoiceClip  # noqa: F401

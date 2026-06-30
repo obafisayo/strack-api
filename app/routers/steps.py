@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 from enum import Enum
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -53,8 +53,7 @@ async def delete_step_event(
     if event is None or event.user_id != user.id or event.deleted_at is not None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Step entry not found")
 
-    event.deleted_at = datetime.now(timezone.utc)
-    await db.flush()
+    await step_aggregation.soft_delete_step_event(db, user, event)
 
     action = await undo_service.create_undo_action(
         db,
@@ -64,7 +63,6 @@ async def delete_step_event(
         target_id=event.id,
         previous_state={"deleted_at": None},
     )
-    await step_aggregation.recompute_daily_stat(db, user, event.recorded_at.date())
     await db.commit()
 
     return StepDeleteResponse(undo_action_id=action.id, undo_expires_at=action.expires_at)

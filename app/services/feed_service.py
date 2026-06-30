@@ -31,3 +31,16 @@ async def create_milestone_post(db: AsyncSession, user: User, milestone: Milesto
     db.add(post)
     await db.flush()
     return post
+
+
+async def create_community_share_post(
+    db: AsyncSession, user: User, message: str | None
+) -> FeedPost:
+    post = FeedPost(
+        user_id=user.id,
+        type=FeedPostType.COMMUNITY_SHARE,
+        payload={"message": message} if message else {},
+    )
+    db.add(post)
+    await db.flush()
+    return post

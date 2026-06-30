@@ -20,6 +20,10 @@ dependencies = [
     "pydantic-settings>=2.3",
     "pyjwt>=2.8",
     "passlib[bcrypt]>=1.7.4",
+    # passlib (unmaintained since 2020) self-tests bcrypt on first use and
+    # bcrypt>=4.1 turned a silent-truncate quirk into a hard ValueError,
+    # breaking every password hash/verify call. Pin below that line.
+    "bcrypt>=4.0.1,<4.1",
     "google-auth>=2.30",
     "requests>=2.31",
     "httpx>=0.27",

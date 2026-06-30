@@ -9,6 +9,7 @@ from app.models.steps import DailyStat
 from app.models.streaks import Streak
 from app.models.voice import VoiceClip
 from app.services.tts.yarngpt_client import get_tts_provider
+from app.services.voice_localization import t
 
 settings = get_settings()
 
@@ -28,36 +29,37 @@ SUPPORTED_LANGUAGES = [
     {"code": "ar", "label": "العربية"},
 ]
 
-STATIC_PHRASES = {
-    "welcome": "Welcome to Strack. Cheers to a great start today!",
-    "keep_going": "Keep it up! You're doing great today.",
-}
+# Context keys map straight onto voice_localization template keys, so the
+# same translated phrase is reused by both /voice/speak?context_key=... and
+# the action dispatcher (e.g. "welcome" is also used as an onboarding cue).
+STATIC_CONTEXT_KEYS = {"welcome", "keep_going"}
 
 
 class UnknownContextKeyError(Exception):
     pass
 
 
-def resolve_context_key(context_key: str) -> str:
-    try:
-        return STATIC_PHRASES[context_key]
-    except KeyError as exc:
-        raise UnknownContextKeyError(f"Unknown context_key: {context_key!r}") from exc
+def resolve_context_key(context_key: str, language: str) -> str:
+    if context_key not in STATIC_CONTEXT_KEYS:
+        raise UnknownContextKeyError(f"Unknown context_key: {context_key!r}")
+    return t(language, context_key)
 
 
-def build_briefing_text(stat: DailyStat | None, goal_steps: int, streak: Streak | None) -> str:
+def build_briefing_text(
+    stat: DailyStat | None, goal_steps: int, streak: Streak | None, language: str
+) -> str:
     steps = stat.total_steps if stat else 0
     remaining = max(goal_steps - steps, 0)
     streak_days = streak.current_streak if streak else 0
 
-    parts = [f"You've completed {steps} steps today."]
-    if remaining > 0:
-        parts.append(f"You have {remaining} steps remaining to reach today's goal.")
-    else:
-        parts.append("You've already reached today's goal. Great job!")
+    text = (
+        t(language, "steps_remaining", steps=steps, remaining=remaining)
+        if remaining > 0
+        else t(language, "steps_goal_reached", steps=steps)
+    )
     if streak_days > 0:
-        parts.append(f"You're on a {streak_days}-day streak.")
-    return " ".join(parts)
+        text += " " + t(language, "briefing_streak", days=streak_days)
+    return text
 
 
 async def get_or_create_clip(db: AsyncSession, text: str, language: str) -> tuple[str, bool]:

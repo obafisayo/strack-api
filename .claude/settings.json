@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wsl.exe -- bash -lc \"cd /mnt/c/Users/sekan/workspace/strack-api && docker compose exec api curl -s -o /dev/null -w 'inside-container HTTP %{http_code}\\\\n' http://localhost:8000/health\")"
+      "Bash(wsl.exe -- bash -lc \"cd /mnt/c/Users/sekan/workspace/strack-api && docker compose exec api curl -s -o /dev/null -w 'inside-container HTTP %{http_code}\\\\n' http://localhost:8000/health\")",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_steps_endpoints.py --collect-only -q)",
+      "Bash(./.venv/Scripts/python.exe -m pytest tests/test_voice_listen_endpoint.py --collect-only -q)",
+      "Bash(wsl.exe -- bash -lc \"echo wsl-check-4\")",
+      "Bash(wsl.exe -- bash -lc \"echo wsl-alive && cd /mnt/c/Users/sekan/workspace/strack-api && docker compose ps 2>&1\")",
+      "PowerShell(wsl.exe -l -v)",
+      "PowerShell(wsl.exe -d Ubuntu -- echo hello-from-wsl)"
     ]
   }
 }

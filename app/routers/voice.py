@@ -32,7 +32,7 @@ async def speak(payload: VoiceSpeakRequest, db: DbSession) -> VoiceSpeakResponse
         text = payload.text
     else:
         try:
-            text = voice_service.resolve_context_key(payload.context_key)
+            text = voice_service.resolve_context_key(payload.context_key, payload.language)
         except voice_service.UnknownContextKeyError as exc:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
@@ -53,7 +53,7 @@ async def get_briefing(user: CurrentUser, db: DbSession, language: str = "en") -
     streak = await streak_service.get_or_create_streak(db, user)
     await db.commit()
 
-    text = voice_service.build_briefing_text(stat, goal.goal_steps, streak)
+    text = voice_service.build_briefing_text(stat, goal.goal_steps, streak, language)
 
     try:
         audio_url, cached = await voice_service.get_or_create_clip(db, text, language)
@@ -93,7 +93,7 @@ async def listen(
         )
 
     intent = match_intent(transcript, language)
-    response_text, result = await voice_action_service.execute(db, user, intent)
+    response_text, result = await voice_action_service.execute(db, user, intent, language)
 
     try:
         audio_url, _cached = await voice_service.get_or_create_clip(db, response_text, language)

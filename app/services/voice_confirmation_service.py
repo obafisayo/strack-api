@@ -15,7 +15,14 @@ from app.models.voice import PendingVoiceConfirmation
 from app.models.user import User
 from app.services.voice_intent_service import Intent
 
-CONFIRMATION_WINDOW_SECONDS = 15
+# The clock starts the moment the pending row is created - before the user
+# has even heard the spoken prompt asking them to confirm, since that audio
+# still has to be TTS-generated and played back first. Verified live against
+# the deployed YarnGPT/Google STT integration: a 15s window was repeatedly
+# eaten by normal request round-trip time (TTS generation for the prompt
+# itself, then STT on the reply) with nothing left for the user to actually
+# speak. 30s leaves enough headroom for that overhead plus a real response.
+CONFIRMATION_WINDOW_SECONDS = 30
 
 
 async def create_pending(

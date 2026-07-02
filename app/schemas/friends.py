@@ -1,13 +1,20 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.friends import FriendGoalStatus, FriendshipStatus
 
 
 class FriendRequestCreate(BaseModel):
-    username_or_email: str = Field(min_length=1)
+    username_or_email: str | None = Field(default=None, min_length=1)
+    user_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _require_one_identifier(self) -> "FriendRequestCreate":
+        if not self.username_or_email and not self.user_id:
+            raise ValueError("Provide either username_or_email or user_id")
+        return self
 
 
 class FriendRequestRead(BaseModel):
@@ -18,6 +25,8 @@ class FriendRequestRead(BaseModel):
     addressee_id: uuid.UUID
     status: FriendshipStatus
     created_at: datetime
+    requester_display_name: str | None = None
+    requester_avatar_url: str | None = None
 
 
 class FriendRead(BaseModel):
@@ -29,6 +38,7 @@ class FriendRead(BaseModel):
 
 class FriendSuggestion(BaseModel):
     user_id: uuid.UUID
+    username: str
     display_name: str
     avatar_url: str | None
 

@@ -1,11 +1,10 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 
 from app.core.deps import CurrentUser, DbSession
-from app.models.feed import FeedPost, Reaction
-from app.models.friends import Friendship, FriendshipStatus
+from app.models.feed import FeedPost, FeedPostType, Reaction
 from app.models.user import User
 from app.schemas.feed import FeedPostRead, FeedShareRequest, ReactionRequest
 from app.services import feed_service
@@ -50,28 +49,22 @@ async def get_activity_feed(
 async def get_community_feed(
     user: CurrentUser, db: DbSession, limit: int = Query(default=20, ge=1, le=100)
 ) -> list[FeedPostRead]:
-    friend_rows = await db.execute(
-        select(Friendship.requester_id, Friendship.addressee_id).where(
-            Friendship.status == FriendshipStatus.ACCEPTED,
-            or_(Friendship.requester_id == user.id, Friendship.addressee_id == user.id),
-        )
-    )
-    friend_ids = set()
-    for requester_id, addressee_id in friend_rows.all():
-        friend_ids.add(addressee_id if requester_id == user.id else requester_id)
-
-    if not friend_ids:
-        return []
-
+    # community_share posts are explicit opt-in shares — show them globally,
+    # not just from friends. Auto-generated types (activity_summary, milestone)
+    # stay in the personal activity feed only.
     posts_result = await db.execute(
         select(FeedPost)
-        .where(FeedPost.user_id.in_(friend_ids))
+        .where(FeedPost.type == FeedPostType.COMMUNITY_SHARE)
         .order_by(FeedPost.created_at.desc())
         .limit(limit)
     )
     posts = posts_result.scalars().all()
 
-    users_result = await db.execute(select(User).where(User.id.in_(friend_ids)))
+    if not posts:
+        return []
+
+    author_ids = {post.user_id for post in posts}
+    users_result = await db.execute(select(User).where(User.id.in_(author_ids)))
     users_by_id = {u.id: u for u in users_result.scalars().all()}
 
     return [await _to_feed_post_read(db, post, users_by_id[post.user_id]) for post in posts]

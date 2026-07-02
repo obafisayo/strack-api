@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 
 from app.core.config import get_settings
 from app.core.deps import CurrentUser, DbSession
@@ -63,7 +63,31 @@ async def list_friend_requests(user: CurrentUser, db: DbSession) -> list[FriendR
             Friendship.addressee_id == user.id, Friendship.status == FriendshipStatus.PENDING
         )
     )
-    return [FriendRequestRead.model_validate(row) for row in rows.all()]
+    friendships = rows.all()
+    if not friendships:
+        return []
+
+    requester_ids = {f.requester_id for f in friendships}
+    users_result = await db.execute(select(User).where(User.id.in_(requester_ids)))
+    users_by_id = {u.id: u for u in users_result.scalars().all()}
+
+    results = []
+    for f in friendships:
+        requester = users_by_id.get(f.requester_id)
+        results.append(
+            FriendRequestRead(
+                id=f.id,
+                requester_id=f.requester_id,
+                addressee_id=f.addressee_id,
+                status=f.status,
+                created_at=f.created_at,
+                requester_display_name=(requester.preferred_name or requester.username)
+                if requester
+                else None,
+                requester_avatar_url=requester.avatar_url if requester else None,
+            )
+        )
+    return results
 
 
 @router.post(
@@ -72,14 +96,19 @@ async def list_friend_requests(user: CurrentUser, db: DbSession) -> list[FriendR
 async def send_friend_request(
     payload: FriendRequestCreate, user: CurrentUser, db: DbSession
 ) -> FriendRequestRead:
-    target = await db.scalar(
-        select(User).where(
-            or_(
-                User.username == payload.username_or_email,
-                User.email == payload.username_or_email,
+    if payload.user_id is not None:
+        target = await db.get(User, payload.user_id)
+    else:
+        # Case-insensitive, trimmed search so "Alice@Example.com" finds "alice@example.com"
+        identifier = payload.username_or_email.strip().lower()
+        target = await db.scalar(
+            select(User).where(
+                or_(
+                    func.lower(User.username) == identifier,
+                    func.lower(User.email) == identifier,
+                )
             )
         )
-    )
     if target is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No user found with that username or email")
     if target.id == user.id:
@@ -100,7 +129,15 @@ async def send_friend_request(
     db.add(friendship)
     await db.commit()
     await db.refresh(friendship)
-    return FriendRequestRead.model_validate(friendship)
+    return FriendRequestRead(
+        id=friendship.id,
+        requester_id=friendship.requester_id,
+        addressee_id=friendship.addressee_id,
+        status=friendship.status,
+        created_at=friendship.created_at,
+        requester_display_name=user.preferred_name or user.username,
+        requester_avatar_url=user.avatar_url,
+    )
 
 
 async def _respond_to_request(
@@ -165,7 +202,10 @@ async def get_suggestions(user: CurrentUser, db: DbSession) -> list[FriendSugges
     rows = await db.execute(select(User).where(User.id.notin_(excluded_ids)).limit(10))
     return [
         FriendSuggestion(
-            user_id=u.id, display_name=u.preferred_name or u.username, avatar_url=u.avatar_url
+            user_id=u.id,
+            username=u.username,
+            display_name=u.preferred_name or u.username,
+            avatar_url=u.avatar_url,
         )
         for u in rows.scalars().all()
     ]

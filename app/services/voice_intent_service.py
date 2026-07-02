@@ -43,18 +43,52 @@ _INTENT_PRIORITY = [
 
 KEYWORDS_BY_LANGUAGE: dict[str, dict[Intent, list[str]]] = {
     "en": {
-        Intent.QUERY_STEPS: ["how many steps", "my steps", "step count", "steps today"],
-        Intent.QUERY_STREAK: ["my streak", "current streak", "how many days streak"],
-        Intent.QUERY_LEADERBOARD: ["leaderboard", "my rank", "my position", "where am i ranked"],
-        Intent.SHARE_PROGRESS: ["share my progress", "share progress", "post my progress"],
-        Intent.DELETE_LAST_ENTRY: [
-            "delete my last entry",
-            "delete last entry",
-            "remove last entry",
-            "delete the last entry",
+        Intent.QUERY_STEPS: [
+            "how many steps", "my steps", "step count", "steps today",
+            "steps", "how far", "how far have i walked", "how far did i walk",
+            "how much have i walked", "show my steps", "check my steps",
+            "what are my steps", "steps so far", "daily steps", "show steps",
+            "how am i doing", "my progress today", "my activity",
+            "how much did i walk", "check my progress", "steps walked",
+            "track my steps", "my walk today", "walked today",
         ],
-        Intent.CONFIRM: ["yes", "confirm", "yes confirm", "yes reset"],
-        Intent.CANCEL: ["no", "cancel", "never mind", "stop"],
+        Intent.QUERY_STREAK: [
+            "my streak", "current streak", "how many days streak",
+            "streak", "days in a row", "consecutive days", "my streak count",
+            "how long is my streak", "what is my streak", "check streak",
+            "my current streak", "how many days",
+        ],
+        Intent.QUERY_LEADERBOARD: [
+            "leaderboard", "my rank", "my position", "where am i ranked",
+            "ranking", "standings", "how do i compare", "where do i stand",
+            "my place", "top scores", "who is winning", "check leaderboard",
+            "show leaderboard", "my ranking", "what position",
+        ],
+        Intent.SHARE_PROGRESS: [
+            "share my progress", "share progress", "post my progress",
+            "share my steps", "post update", "share to community",
+            "tell everyone my progress", "share with everyone",
+            "broadcast my progress", "post my steps",
+        ],
+        Intent.DELETE_LAST_ENTRY: [
+            "delete my last entry", "delete last entry", "remove last entry",
+            "delete the last entry", "undo my last entry", "remove my last entry",
+            "delete last step", "remove last step", "undo last step",
+            "delete that", "delete it", "remove that", "undo that",
+            "delete the last one", "remove the last one",
+        ],
+        Intent.CONFIRM: [
+            "yes", "confirm", "yes confirm", "yes reset",
+            "ok", "okay", "sure", "do it", "go ahead", "yep", "yeah",
+            "of course", "absolutely", "correct", "yes please",
+            "go for it", "i confirm", "please do",
+        ],
+        Intent.CANCEL: [
+            "no", "cancel", "never mind", "stop",
+            "abort", "quit", "nope", "nah", "no thank you",
+            "cancel it", "forget it", "i changed my mind",
+            "no don't",
+        ],
     },
     "yo": {
         Intent.QUERY_STEPS: ["igbesẹ mi", "elo ni igbesẹ mi", "melo ni mo ti rin"],

@@ -39,19 +39,29 @@ async def get_leaderboard(
     start_date = _scope_start_date(scope, today)
 
     friend_ids = await _accepted_friend_ids(db, user.id)
-    candidate_ids = friend_ids | {user.id}
 
-    # Only include candidates who haven't opted into a stricter visibility
-    # than "friends" against this viewer (PUBLIC and FRIENDS both show up
-    # here since the viewer is, by definition, either the user or a friend).
-    visible_ids_result = await db.execute(
+    # PUBLIC users are visible to everyone on the global board.
+    public_ids_result = await db.execute(
         select(UserSettings.user_id).where(
-            UserSettings.user_id.in_(candidate_ids),
-            UserSettings.leaderboard_visibility != LeaderboardVisibility.ANONYMOUS,
+            UserSettings.leaderboard_visibility == LeaderboardVisibility.PUBLIC
         )
     )
-    visible_ids = {row[0] for row in visible_ids_result.all()}
-    visible_ids.add(user.id)  # users always see their own entry, even if anonymous to others
+    public_ids = {row[0] for row in public_ids_result.all()}
+
+    # FRIENDS-visibility users appear only to their accepted friends.
+    if friend_ids:
+        friend_visible_result = await db.execute(
+            select(UserSettings.user_id).where(
+                UserSettings.user_id.in_(friend_ids),
+                UserSettings.leaderboard_visibility != LeaderboardVisibility.ANONYMOUS,
+            )
+        )
+        friend_visible_ids = {row[0] for row in friend_visible_result.all()}
+    else:
+        friend_visible_ids = set()
+
+    # Self always appears regardless of own visibility setting.
+    visible_ids = public_ids | friend_visible_ids | {user.id}
 
     totals_result = await db.execute(
         select(DailyStat.user_id, func.coalesce(func.sum(DailyStat.total_steps), 0))
@@ -74,7 +84,7 @@ async def get_leaderboard(
         LeaderboardEntry(
             rank=index + 1,
             user_id=user_id,
-            display_name=(users_by_id[user_id].preferred_name or "Strack User"),
+            display_name=(users_by_id[user_id].preferred_name or users_by_id[user_id].username),
             avatar_url=users_by_id[user_id].avatar_url,
             steps=steps,
             is_self=(user_id == user.id),

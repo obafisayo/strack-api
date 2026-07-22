@@ -1,10 +1,10 @@
-import uuid
-from pathlib import Path
+import base64
+from io import BytesIO
 
 from fastapi import APIRouter, HTTPException, UploadFile, status
+from PIL import Image
 from sqlalchemy import func, or_, select
 
-from app.core.config import get_settings
 from app.core.deps import CurrentUser, DbSession
 from app.models.friends import Friendship, FriendshipStatus
 from app.models.steps import DailyStat
@@ -12,7 +12,6 @@ from app.models.streaks import Streak
 from app.schemas.user import UserRead, UserStats, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
-settings = get_settings()
 
 ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
@@ -41,13 +40,16 @@ async def upload_avatar(file: UploadFile, user: CurrentUser, db: DbSession) -> U
     if len(contents) > MAX_AVATAR_BYTES:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Image exceeds 5MB limit")
 
-    extension = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}[file.content_type]
-    avatar_dir = Path(settings.media_root) / "avatars"
-    avatar_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{user.id}.{extension}"
-    (avatar_dir / filename).write_bytes(contents)
+    try:
+        img = Image.open(BytesIO(contents)).convert("RGB")
+        img.thumbnail((300, 300), Image.LANCZOS)
+        buf = BytesIO()
+        img.save(buf, format="JPEG", quality=80, optimize=True)
+        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    except Exception as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Could not process image") from exc
 
-    user.avatar_url = f"{settings.media_url}/avatars/{filename}"
+    user.avatar_url = f"data:image/jpeg;base64,{b64}"
     await db.commit()
     await db.refresh(user)
     return UserRead.model_validate(user)

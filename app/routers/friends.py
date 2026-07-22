@@ -81,10 +81,10 @@ async def list_friend_requests(user: CurrentUser, db: DbSession) -> list[FriendR
                 addressee_id=f.addressee_id,
                 status=f.status,
                 created_at=f.created_at,
-                requester_display_name=(requester.preferred_name or requester.username)
+                display_name=(requester.preferred_name or requester.username)
                 if requester
                 else None,
-                requester_avatar_url=requester.avatar_url if requester else None,
+                avatar_url=requester.avatar_url if requester else None,
             )
         )
     return results
@@ -135,8 +135,8 @@ async def send_friend_request(
         addressee_id=friendship.addressee_id,
         status=friendship.status,
         created_at=friendship.created_at,
-        requester_display_name=user.preferred_name or user.username,
-        requester_avatar_url=user.avatar_url,
+        display_name=user.preferred_name or user.username,
+        avatar_url=user.avatar_url,
     )
 
 

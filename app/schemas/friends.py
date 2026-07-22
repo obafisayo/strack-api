@@ -25,8 +25,8 @@ class FriendRequestRead(BaseModel):
     addressee_id: uuid.UUID
     status: FriendshipStatus
     created_at: datetime
-    requester_display_name: str | None = None
-    requester_avatar_url: str | None = None
+    display_name: str | None = None
+    avatar_url: str | None = None
 
 
 class FriendRead(BaseModel):

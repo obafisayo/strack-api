@@ -47,7 +47,7 @@ async def upload_avatar(file: UploadFile, user: CurrentUser, db: DbSession) -> U
     filename = f"{user.id}.{extension}"
     (avatar_dir / filename).write_bytes(contents)
 
-    user.avatar_url = f"{settings.base_url}{settings.media_url}/avatars/{filename}"
+    user.avatar_url = f"{settings.media_url}/avatars/{filename}"
     await db.commit()
     await db.refresh(user)
     return UserRead.model_validate(user)

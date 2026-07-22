@@ -145,7 +145,7 @@ class GoogleSTTClient(STTProvider):
         access_token = await self._get_access_token()
         language_code = LANGUAGE_CODE_BY_APP_LANGUAGE.get(language, DEFAULT_LANGUAGE_CODE)
 
-        payload = {
+        payload: dict = {
             "config": {
                 "encoding": encoding,
                 "sampleRateHertz": sample_rate_hertz,
@@ -154,6 +154,14 @@ class GoogleSTTClient(STTProvider):
             },
             "audio": {"content": base64.b64encode(audio_bytes).decode("ascii")},
         }
+
+        hints = _SPEECH_HINTS.get(language_code, [])
+        if hints:
+            payload["config"]["speechContexts"] = [{"phrases": hints, "boost": 15}]
+
+        alt_codes = _ALTERNATIVE_LANGUAGE_CODES.get(language_code, [])
+        if alt_codes:
+            payload["config"]["alternativeLanguageCodes"] = alt_codes
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:

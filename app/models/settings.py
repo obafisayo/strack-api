@@ -62,7 +62,7 @@ class UserSettings(UUIDPkMixin, Base):
     units: Mapped[Units] = mapped_column(Enum(Units, name="units"), default=Units.KM, nullable=False)
     leaderboard_visibility: Mapped[LeaderboardVisibility] = mapped_column(
         Enum(LeaderboardVisibility, name="leaderboard_visibility"),
-        default=LeaderboardVisibility.FRIENDS,
+        default=LeaderboardVisibility.PUBLIC,
         nullable=False,
     )
 

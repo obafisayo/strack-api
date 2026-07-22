@@ -42,6 +42,71 @@ LANGUAGE_CODE_BY_APP_LANGUAGE: dict[str, str] = {
 }
 DEFAULT_LANGUAGE_CODE = "en-NG"
 
+# Vocabulary hints sent to Google STT so its acoustic model scores our command
+# words higher than generic speech. Written in the plain form Google STT itself
+# returns for each language (yo-NG/ig-NG/ha-NG transcripts drop tone marks, so
+# diacritics would never match the incoming transcript anyway).
+_SPEECH_HINTS: dict[str, list[str]] = {
+    "yo-NG": [
+        # steps / walking
+        "igbese", "igbese mi", "kini igbese", "kini igbese mi",
+        "elo igbese mi", "melo igbese", "mo ti rin", "irin ajo mi",
+        # streak / days
+        "ojo mi", "streak mi", "owoowoomi", "ojo owoowoomi",
+        # leaderboard / rank
+        "ipo mi", "adije", "leaderboard",
+        # share / delete
+        "pin ilosiwaju mi", "ilosiwaju mi", "pa igbese", "yo igbese",
+        # confirm / cancel
+        "beeni", "rara", "fagile",
+    ],
+    "ig-NG": [
+        # steps
+        "nzoukwu", "nzoukwu m", "ole nzoukwu m", "nzoukwu m taa",
+        # streak
+        "usoro ubochi", "usoro ubochi m", "ubochi m", "ole ubochi",
+        # leaderboard
+        "onodu", "onodu m", "ebe m no",
+        # share / delete
+        "kesaa oganihu m", "oganihu m", "hichapu ndenye", "wepu ndenye",
+        # confirm / cancel
+        "ee", "kwado", "o di mma", "mba", "kagbuo",
+    ],
+    "ha-NG": [
+        # steps
+        "matakai", "matakaina", "matakai na", "matakai nawa",
+        "yaya matakaina", "nawa matakaina ne",
+        # streak
+        "jerin kwanaki", "jerin kwanaki nawa", "jerina", "kwanaki nawa",
+        # leaderboard
+        "matsayi", "matsayina", "matsayi nawa", "ina na tsaya",
+        # share / delete
+        "raba ci gaba", "raba ci gabana", "goge shigarwa", "share shigarwa ta karshe",
+        # confirm / cancel
+        "tabbatar", "i tabbatar", "soke", "a'a",
+    ],
+    "en-NG": [
+        # covers both "en" and "pcm" (Nigerian Pidgin)
+        "steps", "my steps", "step count", "how many steps", "steps today",
+        "streak", "my streak", "how many days",
+        "leaderboard", "my rank", "my position",
+        "share my progress", "post my progress",
+        "delete my last entry", "delete last entry", "undo last step",
+        "yes", "confirm", "okay", "no", "cancel",
+        # Pidgin-specific
+        "waka", "how many step i waka", "wetin be my steps", "how my steps be",
+        "na so", "i confam", "abeg no",
+    ],
+}
+
+# Nigerian languages frequently mix in English words ("streak mi", "leaderboard").
+# Adding en-NG as an alternative lets Google recognise those tokens in context.
+_ALTERNATIVE_LANGUAGE_CODES: dict[str, list[str]] = {
+    "yo-NG": ["en-NG"],
+    "ig-NG": ["en-NG"],
+    "ha-NG": ["en-NG"],
+}
+
 # Module-level so the minted access token (valid ~1hr) is reused across
 # requests instead of being re-derived from the service account key every
 # time get_stt_provider() is called.

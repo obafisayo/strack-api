@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, String
+from sqlalchemy import DateTime, Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -51,7 +51,7 @@ class User(UUIDPkMixin, TimestampMixin, Base):
     activity_level: Mapped[ActivityLevel | None] = mapped_column(
         Enum(ActivityLevel, name="activity_level"), nullable=True
     )
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     onboarding_completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

@@ -91,44 +91,142 @@ KEYWORDS_BY_LANGUAGE: dict[str, dict[Intent, list[str]]] = {
         ],
     },
     "yo": {
-        Intent.QUERY_STEPS: ["igbesẹ mi", "elo ni igbesẹ mi", "melo ni mo ti rin"],
-        Intent.QUERY_STREAK: ["ọjọ́ mi", "elo ọjọ́ ni mo ti rin télé"],
-        Intent.QUERY_LEADERBOARD: ["ipo mi", "ipo mi nínú àdíje"],
-        Intent.SHARE_PROGRESS: ["pin ilọsiwaju mi", "fi ilọsiwaju mi han"],
-        Intent.DELETE_LAST_ENTRY: ["pa igbesẹ tó kẹ́yìn rẹ́", "yọ igbesẹ tó kẹ́yìn kúrò"],
-        Intent.CONFIRM: ["bẹ́ẹ̀ni", "mo gbà", "bẹ́ẹ̀ni mo gbà"],
-        Intent.CANCEL: ["rárá", "fagilé"],
+        # Google STT for Yoruba often drops or simplifies tone marks, and may
+        # produce varied word orders. Keywords here cover the most natural
+        # phrasings a real user would say, at multiple levels of specificity.
+        # Single-word anchors (e.g. "igbesẹ") catch partial STT transcripts
+        # that would otherwise always fall through to UNKNOWN.
+        Intent.QUERY_STEPS: [
+            # multi-word phrases (checked first for specificity)
+            "elo ni igbesẹ mi", "melo ni igbesẹ mi", "kini igbesẹ mi",
+            "igbesẹ mi loni", "elo igbesẹ mi", "igbesẹ mi bawo ni",
+            "melo ni mo ti rin", "elo ni mo ti rin",
+            "irin ajo mi", "igbesẹ mi",
+            # single-word anchors (broad but necessary for noisy STT output)
+            "igbesẹ", "igbese",
+        ],
+        Intent.QUERY_STREAK: [
+            "ọjọ melo ni mo ti rin", "elo ọjọ ni mo ti rin",
+            "ọjọ mi", "ọwọọwọ mi", "ọjọ ọwọọwọ mi",
+            "melo ni ọjọ mi", "ọjọ to ku", "ọjọ rin mi",
+            "streak mi",
+        ],
+        Intent.QUERY_LEADERBOARD: [
+            "ipo mi ninu adije", "ipo mi", "ibo ni mo wa",
+            "ibo ni mo duro", "ipele mi", "adije",
+        ],
+        Intent.SHARE_PROGRESS: [
+            "pin ilọsiwaju mi", "fi ilọsiwaju mi han",
+            "sọ fun gbogbo eniyan", "pin irin ajo mi",
+            "share ilọsiwaju mi",
+        ],
+        Intent.DELETE_LAST_ENTRY: [
+            "pa igbesẹ to kẹyìn rẹ", "yọ igbesẹ to kẹyìn kuro",
+            "pa ẹbẹ mi to kẹyìn", "yọ ẹbẹ mi to kẹyìn",
+            "pa ẹbẹ naa", "yọ ẹbẹ naa",
+        ],
+        Intent.CONFIRM: ["bẹẹni", "mo gbà", "bẹẹni mo gbà", "otitọ", "daju"],
+        Intent.CANCEL: ["rara", "fagilé", "maṣe", "gba silẹ"],
     },
     "ig": {
-        Intent.QUERY_STEPS: ["nzọụkwụ m", "ole nzọụkwụ m", "ole ka nzọụkwụ m dị"],
-        Intent.QUERY_STREAK: ["usoro ụbọchị m", "ụbọchị m"],
-        Intent.QUERY_LEADERBOARD: ["ọnọdụ m"],
-        Intent.SHARE_PROGRESS: ["kesaa ọganihu m"],
-        Intent.DELETE_LAST_ENTRY: ["hichapụ ndenye ikpeazụ m", "wepụ ndenye ikpeazụ m"],
-        Intent.CONFIRM: ["ee", "kwado"],
-        Intent.CANCEL: ["mba", "kagbuo"],
+        # Same strategy as "yo": multi-word phrases first for specificity,
+        # single-word anchors at the end to catch partial/noisy STT output.
+        Intent.QUERY_STEPS: [
+            "ole nzọụkwụ m dị", "ole nzọụkwụ m", "gwa m nzọụkwụ m",
+            "lelee nzọụkwụ m", "ọ bụ ole nzọụkwụ m",
+            "nzọụkwụ m taa", "nzọụkwụ m",
+            "nzọụkwụ",
+        ],
+        Intent.QUERY_STREAK: [
+            "usoro ụbọchị m ole", "usoro ụbọchị m", "ole ụbọchị m",
+            "ụbọchị ole m ji aga", "ọ bụ ole ụbọchị",
+            "usoro ụbọchị", "usoro",
+        ],
+        Intent.QUERY_LEADERBOARD: [
+            "ọnọdụ m n'egwuregwu", "ọnọdụ m n'asọmpi", "ọnọdụ m",
+            "ebe m nọ", "ole m nọ", "ọnọdụ",
+        ],
+        Intent.SHARE_PROGRESS: [
+            "kesaa ọganihu m", "gosi ọganihu m", "kọọ ndị ọzọ ọganihu m",
+            "kesaa", "ọganihu m",
+        ],
+        Intent.DELETE_LAST_ENTRY: [
+            "hichapụ ndenye ikpeazụ m", "wepụ ndenye ikpeazụ m",
+            "hichapụ ndenye", "wepụ ndenye",
+            "hichapụ ya", "wepụ ya",
+        ],
+        Intent.CONFIRM: ["ọ dị mma", "kwado ya", "ee kwado", "ee"],
+        Intent.CANCEL: ["mba biko", "kagbuo ya", "kagbuo", "mba"],
     },
     "ha": {
         # "matakai na" included alongside "matakaina": observed live against
         # real Google STT output that it sometimes splits the compound word
         # into two tokens - matching needs to tolerate that, not just the
         # dictionary-correct spelling.
-        Intent.QUERY_STEPS: ["matakaina", "matakai na", "nawa matakaina ne"],
-        Intent.QUERY_STREAK: ["jerina", "kwanakina a jere"],
-        Intent.QUERY_LEADERBOARD: ["matsayina"],
-        Intent.SHARE_PROGRESS: ["raba ci gabana"],
-        Intent.DELETE_LAST_ENTRY: ["share shigarwa ta karshe", "goge shigarwa ta karshe"],
-        Intent.CONFIRM: ["i", "eh", "tabbatar"],
-        Intent.CANCEL: ["a'a", "soke"],
+        Intent.QUERY_STEPS: [
+            "nawa matakaina ne", "yaya matakaina", "gaya mani matakaina",
+            "nawa matakai na", "matakai nawa", "matakaina nawa",
+            "matakai na", "matakaina",
+            "matakai",
+        ],
+        Intent.QUERY_STREAK: [
+            "jerin kwanaki nawa", "kwanaki nawa na jere", "kwanakina a jere",
+            "yaya jerin kwanakina", "jerin kwanaki na",
+            "jerin kwanaki", "jerina",
+            "jerin",
+        ],
+        Intent.QUERY_LEADERBOARD: [
+            "ina na tsaya a jerin", "matsayi na a jerin",
+            "ina na tsaya", "matsayi nawa", "matsayina",
+            "matsayi",
+        ],
+        Intent.SHARE_PROGRESS: [
+            "raba ci gabana", "nuna wa mutane ci gabana",
+            "raba ci gaba", "raba",
+        ],
+        Intent.DELETE_LAST_ENTRY: [
+            "goge shigarwa ta karshe", "share shigarwa ta karshe",
+            "goge shigarwa", "share shigarwa",
+            "goge ta karshe", "share ta karshe",
+        ],
+        Intent.CONFIRM: ["tabbatar da shi", "i tabbatar", "tabbatar", "eh", "i"],
+        Intent.CANCEL: ["a'a bari", "soke shi", "soke", "a'a"],
     },
     "pcm": {
-        Intent.QUERY_STEPS: ["how many step i waka", "wetin be my steps", "how my steps be"],
-        Intent.QUERY_STREAK: ["wetin be my streak", "how many days i don waka"],
-        Intent.QUERY_LEADERBOARD: ["wetin be my rank", "where i dey for leaderboard"],
-        Intent.SHARE_PROGRESS: ["share my progress", "post my progress"],
-        Intent.DELETE_LAST_ENTRY: ["delete my last entry", "remove the last one i enter"],
-        Intent.CONFIRM: ["yes", "na so", "i confam"],
-        Intent.CANCEL: ["no", "abeg no", "make e stop"],
+        # Pidgin borrows heavily from English. Single-word English anchors
+        # ("steps", "streak", "rank") are listed explicitly here because
+        # this list is only consulted when language == "pcm", not "en".
+        Intent.QUERY_STEPS: [
+            "how many step i waka", "how far i don waka", "wetin be my steps",
+            "how my steps be", "show me my steps", "check my steps",
+            "how many i waka", "my waka today",
+            "my steps", "how many steps",
+            "waka", "steps",
+        ],
+        Intent.QUERY_STREAK: [
+            "how many days i don waka", "how long my streak don be",
+            "wetin be my streak", "my streak na wetin",
+            "how many days", "my streak",
+            "streak",
+        ],
+        Intent.QUERY_LEADERBOARD: [
+            "where i dey for leaderboard", "wetin be my rank",
+            "where i dey rank", "my position for leaderboard",
+            "my rank", "leaderboard",
+            "rank",
+        ],
+        Intent.SHARE_PROGRESS: [
+            "share my progress", "post my progress",
+            "tell everybody my progress", "make people know my progress",
+            "broadcast my progress", "share am",
+        ],
+        Intent.DELETE_LAST_ENTRY: [
+            "delete my last entry", "remove the last one i enter",
+            "delete the last one", "remove my last entry",
+            "delete am", "remove am", "wipe am",
+        ],
+        Intent.CONFIRM: ["i confam", "na so", "do am", "go ahead", "correct", "yes"],
+        Intent.CANCEL: ["abeg no", "no abeg", "make e stop", "cancel am", "stop am", "no"],
     },
 }
 

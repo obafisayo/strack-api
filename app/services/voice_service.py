@@ -64,24 +64,28 @@ def build_briefing_text(
 
 async def get_or_create_clip(db: AsyncSession, text: str, language: str) -> tuple[str, bool]:
     text_hash = hashlib.sha256(f"{language}:{text}".encode("utf-8")).hexdigest()
+    audio_dir = Path(settings.media_root) / "audio"
+    filename = f"{text_hash}.mp3"
+    # Relative path so the client resolves it against the API origin, avoiding
+    # broken absolute URLs when base_url is misconfigured (e.g. still localhost).
+    audio_url = f"{settings.media_url}/audio/{filename}"
 
     existing = await db.scalar(
         select(VoiceClip).where(VoiceClip.text_hash == text_hash, VoiceClip.language == language)
     )
-    if existing is not None:
-        return existing.audio_url, True
+    if existing is not None and (audio_dir / filename).exists():
+        return audio_url, True
+    # File missing (e.g. after Render restart that wiped the ephemeral disk).
+    # Fall through to re-generate even if the DB row exists.
 
     provider = get_tts_provider()
     audio_bytes = await provider.synthesize(text, language)
 
-    audio_dir = Path(settings.media_root) / "audio"
     audio_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{text_hash}.mp3"
     (audio_dir / filename).write_bytes(audio_bytes)
 
-    audio_url = f"{settings.base_url}{settings.media_url}/audio/{filename}"
-
-    db.add(VoiceClip(text_hash=text_hash, language=language, text=text, audio_url=audio_url))
-    await db.flush()
+    if existing is None:
+        db.add(VoiceClip(text_hash=text_hash, language=language, text=text, audio_url=audio_url))
+        await db.flush()
 
     return audio_url, False
